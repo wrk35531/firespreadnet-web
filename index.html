@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>FireSpreadNet Dashboard</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background: #eaedf1; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        #map { height: 400px; width: 100%; margin-top: 20px; border-radius: 8px; }
+        .card { display: inline-block; background: #f8f9fa; width: 25%; padding: 15px; margin: 10px; border-radius: 8px; border-left: 5px solid #007bff; }
+        .danger { color: #dc3545; font-weight: bold; animation: blink 1s infinite; border-left: 5px solid #dc3545; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        th { background-color: #007bff; color: white; }
+        @keyframes blink { 50% { opacity: 0; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🔥 ระบบเครือข่ายติดตามการลุกลามของไฟป่า (FireSpreadNet) 🔥</h2>
+        <hr>
+        <div class="card" id="card-temp"><h4>🌡️ อุณหภูมิ</h4><h2 id="temp">--</h2> °C</div>
+        <div class="card" id="card-hum"><h4>💧 ความชื้น</h4><h2 id="hum">--</h2> %</div>
+        <div class="card" id="card-status"><h4>🚨 สถานะ</h4><h2 id="status">--</h2></div>
+        <div id="map"></div>
+    </div>
+
+    <div class="container">
+        <h3>📊 สถิติสภาพแวดล้อมย้อนหลัง (ค่าเฉลี่ยรายวัน)</h3>
+        <table>
+            <thead><tr><th>วันที่</th><th>อุณหภูมิเฉลี่ย (°C)</th><th>ความชื้นเฉลี่ย (%)</th></tr></thead>
+            <tbody id="historyTable"></tbody>
+        </table>
+    </div>
+
+    <script>
+        // เปลี่ยนพิกัดแผนที่เป็นพิกัดจริงของคุณ
+        var map = L.map('map').setView([13.7563, 100.5018], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        var marker = L.marker([13.7563, 100.5018]).addTo(map).bindPopup("<b>สถานีตรวจจับที่ 1</b>").openPopup();
+
+        // นำลิงก์ Firebase จริงของคุณมาใส่ตรงนี้ (ต้องมี .json ต่อท้าย)
+        const firebaseURL = "https://FireSpreadNet.firebasedatabase.app/FireSpreadNet.json";
+
+        function fetchData() {
+            fetch(firebaseURL)
+            .then(res => res.json())
+            .then(data => {
+                if(!data) return;
+                
+                // หากข้อมูลถูกส่งมาเป็นก้อน (จากการใช้ POST ในบอร์ด) ให้ดึงค่าล่าสุดมาแสดงแผนที่
+                let latestData = {};
+                let dailyData = {};
+                
+                for (let key in data) {
+                    let entry = data[key];
+                    latestData = entry; // วนทับจนได้ค่าล่าสุด
+                    
+                    // จัดกลุ่มข้อมูลทำสถิติรายวัน
+                    if(entry.date) {
+                        if (!dailyData[entry.date]) dailyData[entry.date] = { temp: 0, hum: 0, count: 0 };
+                        dailyData[entry.date].temp += entry.temperature;
+                        dailyData[entry.date].hum += entry.humidity;
+                        dailyData[entry.date].count += 1;
+                    }
+                }
+
+                // อัปเดตหน้าปัด Real-time
+                if(latestData.temperature) {
+                    document.getElementById('temp').innerText = latestData.temperature.toFixed(1);
+                    document.getElementById('hum').innerText = latestData.humidity.toFixed(1);
+                    
+                    // วิเคราะห์สถานะไฟป่า
+                    let currentStatus = "Normal";
+                    let isDanger = false;
+                    if (latestData.temperature > 45.0) {
+                        currentStatus = "FIRE DETECTED!";
+                        isDanger = true;
+                    }
+
+                    const statusText = document.getElementById('status');
+                    statusText.innerText = currentStatus;
+                    statusText.className = isDanger ? "danger" : "";
+                    document.getElementById('card-status').className = isDanger ? "card danger" : "card";
+
+                    marker.setPopupContent(`<b>สถานีตรวจจับที่ 1</b><br>อุณหภูมิ: ${latestData.temperature}°C<br>สถานะ: ${currentStatus}`);
+                }
+
+                // อัปเดตตารางสถิติ
+                let tableHTML = "";
+                for (let date in dailyData) {
+                    let avgTemp = (dailyData[date].temp / dailyData[date].count).toFixed(1);
+                    let avgHum = (dailyData[date].hum / dailyData[date].count).toFixed(1);
+                    tableHTML += `<tr><td>${date}</td><td>${avgTemp}</td><td>${avgHum}</td></tr>`;
+                }
+                document.getElementById('historyTable').innerHTML = tableHTML;
+            })
+            .catch(err => console.error("Error:", err));
+        }
+        
+        setInterval(fetchData, 5000); 
+        fetchData();
+    </script>
+</body>
+</html>
