@@ -84,7 +84,8 @@
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
     L.marker([lat, lng]).addTo(map).bindPopup('<b>สถานีตรวจจับที่ 1</b><br>โรงเรียนวัดไร่ขิงวิทยา').openPopup();
 
-    const firebaseURL = "https://FireSpreadNet.firebasedatabase.app/FireSpreadNet.json";
+    //const firebaseURL = "https://FireSpreadNet.firebasedatabase.app/FireSpreadNet.json";
+    const FIREBASE_URL = "https://firespreadnet-35531-default-rtdb.asia-southeast1.firebasedatabase.app/FireSpreadNet.json";
     let lastDataString = "";
 
     // 2. ฟังก์ชันดึงข้อมูลจาก Firebase อัตโนมัติ
