@@ -9,10 +9,9 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   
   <style>
-    body { background-color: #f8f9fa; font-family: 'Kanit', 'Segoe UI', Tahoma, sans-serif; }
+    body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     .main-card { border-radius: 10px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
     
-    /* ถอดแบบโทนสีและการ์ดจากหน้าเว็บเดิมของคุณ */
     .card-temp { border-left: 5px solid #dc3545 !important; }
     .card-hum { border-left: 5px solid #0d6efd !important; }
     .card-status { border-left: 5px solid #198754 !important; }
@@ -29,12 +28,27 @@
 <body>
 
   <div class="container py-4">
-    <!-- Header เดิม -->
+    <!-- Header -->
     <div class="text-center mb-4">
       <h3 class="fw-bold text-dark">🔥 Wildfire Spread Monitoring System (FireSpreadNet) 🔥</h3>
     </div>
 
-    <!-- 1. Real-time Cards (คงรูปแบบการ์ด 3 ช่องเดิมไว้เป๊ะๆ) -->
+    <!-- 1. Seasonal Mode Selector (แผงเลือกฤดูกาล) -->
+    <div class="card main-card p-3 mb-4 bg-white border-start border-warning border-4">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-center">
+        <div class="mb-2 mb-md-0">
+          <h6 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-sliders me-2 text-warning"></i> Seasonal Threshold Mode</h6>
+          <small class="text-muted">Select active season to adjust detection sensitivity automatically.</small>
+        </div>
+        <div class="btn-group" role="group" id="seasonBtnGroup">
+          <button type="button" class="btn btn-outline-warning active" onclick="setSeason('Summer')">☀️ Summer</button>
+          <button type="button" class="btn btn-outline-info" onclick="setSeason('Rainy')">🌧️ Rainy</button>
+          <button type="button" class="btn btn-outline-primary" onclick="setSeason('Winter')">❄️ Winter</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Real-time Cards -->
     <div class="row g-3 mb-4">
       <div class="col-md-4">
         <div class="card main-card card-temp p-3 bg-white">
@@ -72,7 +86,7 @@
       </div>
     </div>
 
-    <!-- 2. Visual Verification Snapshot (ส่วนแสดงรูปภาพเมื่อเกิด Warning / Critical) -->
+    <!-- 3. Visual Verification Snapshot -->
     <div class="card main-card p-4 mb-4 bg-white">
       <h5 class="fw-bold mb-3"><i class="fa-solid fa-camera text-secondary me-2"></i> Visual Verification (Alert Snapshot)</h5>
       <div class="row align-items-center">
@@ -91,7 +105,7 @@
       </div>
     </div>
 
-    <!-- 3. Real-time Log Table (ตารางบันทึกข้อมูลล่าสุดคงเดิม) -->
+    <!-- 4. Real-time Log Table -->
     <div class="card main-card p-4 mb-4 bg-white">
       <h5 class="fw-bold mb-3"><i class="fa-solid fa-clock-rotate-left text-secondary me-2"></i> Real-time Event Log</h5>
       <div class="table-responsive">
@@ -111,7 +125,7 @@
       </div>
     </div>
 
-    <!-- 4. Daily Summary Table (ตารางสรุปค่าเฉลี่ยรายวัน ค.ศ.) -->
+    <!-- 5. Daily Summary Table (CE Calendar) -->
     <div class="card main-card p-4 mb-4 bg-white">
       <h5 class="fw-bold mb-3"><i class="fa-solid fa-calendar-days text-secondary me-2"></i> Daily Summary Logs (CE Calendar)</h5>
       <div class="table-responsive">
@@ -135,16 +149,38 @@
 
   <!-- JavaScript -->
   <script>
-    const FIREBASE_URL = "https://firespreadnet-35531-default-rtdb.asia-southeast1.firebasedatabase.app/FireSpreadNet.json";
+    const FIREBASE_DATA_URL = "https://firespreadnet-35531-default-rtdb.asia-southeast1.firebasedatabase.app/FireSpreadNet.json";
+    const FIREBASE_CONFIG_URL = "https://firespreadnet-35531-default-rtdb.asia-southeast1.firebasedatabase.app/FireSpreadNet/Config.json";
     
     let lastBoardMillis = null;
     let unchangedCount = 0;
     const logsHistory = [];
 
-    // ฟังก์ชันแปลงเวลาเป็น ค.ศ. (CE)
+    // ฟังก์ชันกดเปลี่ยนฤดูกาลแล้วส่งค่าไป Firebase
+    async function setSeason(seasonName) {
+      const buttons = document.querySelectorAll('#seasonBtnGroup .btn');
+      buttons.forEach(btn => btn.classList.remove('active'));
+      
+      if (seasonName === 'Summer') buttons[0].classList.add('active');
+      if (seasonName === 'Rainy')  buttons[1].classList.add('active');
+      if (seasonName === 'Winter') buttons[2].classList.add('active');
+
+      try {
+        await fetch(FIREBASE_CONFIG_URL, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ season: seasonName })
+        });
+        console.log(`Updated active season to: ${seasonName}`);
+      } catch (err) {
+        console.error("Error setting season config:", err);
+      }
+    }
+
+    // แปลงเวลาให้เป็น ค.ศ. (CE YYYY-MM-DD HH:mm:ss)
     function getCETimestamp() {
       const now = new Date();
-      const year = now.getFullYear(); // ได้ปี ค.ศ. เช่น 2026
+      const year = now.getFullYear();
       const month = String(now.getMonth() + 1).padStart(2, '0');
       const day = String(now.getDate()).padStart(2, '0');
       const hours = String(now.getHours()).padStart(2, '0');
@@ -159,12 +195,12 @@
 
     async function checkFirebaseData() {
       try {
-        const response = await fetch(FIREBASE_URL);
+        const response = await fetch(FIREBASE_DATA_URL);
         const data = await response.json();
 
         if (!data) return;
 
-        // 💡 เช็กว่าถอดบอร์ดออกหรือยัง? (ถ้าค่า time ไม่ขยับเกิน 4 รอบ = 12 วินาที ให้ถือว่า Offline)
+        // เช็ก Heartbeat ถ้าค่า time ไม่เปลี่ยนเกิน 12 วินาที (4 รอบ) แสดงว่าบอร์ด Offline
         if (data.time === lastBoardMillis) {
           unchangedCount++;
         } else {
@@ -173,12 +209,10 @@
         }
 
         if (unchangedCount >= 4) {
-          // บอร์ดดับ/ถูกถอดสาย ออกแสดงสถานะ Offline
           setSystemOffline();
           return;
         }
 
-        // หากบอร์ดทำงานปกติ ให้แสดงผลค่าจริง
         updateDashboard(data);
 
       } catch (err) {
@@ -199,7 +233,6 @@
     function updateDashboard(data) {
       const timeInfo = getCETimestamp();
 
-      // 1. อัปเดตการ์ด
       document.getElementById('currTemp').innerText = `${parseFloat(data.temperature).toFixed(1)} °C`;
       document.getElementById('currHum').innerText = `${parseFloat(data.humidity).toFixed(1)} %`;
 
@@ -220,7 +253,6 @@
         cardBorder.style.borderLeftColor = "#198754";
       }
 
-      // 2. อัปเดตรูปถ่าย (ถ้ามีส่งมาเมื่อ Warning หรือ Critical)
       if (data.image && data.image.length > 50) {
         document.getElementById('snapshotImg').src = data.image;
         document.getElementById('imgTime').innerText = timeInfo.full;
@@ -230,7 +262,6 @@
         imgBadge.innerText = data.status;
       }
 
-      // 3. บันทึกเข้า Log อาร์เรย์
       logsHistory.unshift({
         timestamp: timeInfo.full,
         dateKey: timeInfo.dateOnly,
@@ -305,7 +336,6 @@
       });
     }
 
-    // ดึงข้อมูลทุกๆ 3 วินาที
     setInterval(checkFirebaseData, 3000);
     checkFirebaseData();
   </script>
