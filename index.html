@@ -9,21 +9,21 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <!-- Leaflet (Map) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-  
+
   <style>
     body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     .main-card { border-radius: 10px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    
+
     .card-temp { border-left: 5px solid #dc3545 !important; }
     .card-hum { border-left: 5px solid #0d6efd !important; }
     .card-status { border-left: 5px solid #198754 !important; }
-    
+
     .status-badge { font-size: 1.1rem; padding: 6px 16px; border-radius: 20px; }
     .bg-offline { background-color: #6c757d; color: white; }
     .bg-normal { background-color: #198754; color: white; }
     .bg-warning { background-color: #ffc107; color: #212529; }
     .bg-critical { background-color: #dc3545; color: white; }
-    
+
     .snapshot-box { max-height: 350px; object-fit: contain; background: #000; border-radius: 8px; }
     .ai-box { background: #f1f3f5; border-radius: 8px; border-left: 4px solid #6f42c1; }
 
@@ -110,7 +110,8 @@
       <div class="row align-items-center">
         <!-- Snapshot Image View -->
         <div class="col-md-6 text-center mb-3 mb-md-0">
-          <img id="snapshotImg" src="https://via.placeholder.com/640x480?text=No+Alert+Snapshot" class="img-fluid snapshot-box w-100" alt="Alert Image">
+          <img id="snapshotImg" class="img-fluid snapshot-box w-100" alt="Alert Image"
+            src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='480'><rect width='100%' height='100%' fill='%23333'/><text x='50%' y='50%' fill='white' font-size='28' text-anchor='middle'>No Alert Snapshot</text></svg>">
           <canvas id="analysisCanvas" style="display:none;"></canvas>
         </div>
 
@@ -182,7 +183,7 @@
   <script>
     const FIREBASE_DATA_URL = "https://firespreadnet-35531-default-rtdb.asia-southeast1.firebasedatabase.app/FireSpreadNet.json";
     const FIREBASE_CONFIG_URL = "https://firespreadnet-35531-default-rtdb.asia-southeast1.firebasedatabase.app/FireSpreadNet/Config.json";
-    
+
     let lastBoardMillis = null;
     let unchangedCount = 0;
     let lastAnalyzedImage = "";
@@ -217,7 +218,7 @@
     async function setSeason(seasonName) {
       const buttons = document.querySelectorAll('#seasonBtnGroup .btn');
       buttons.forEach(btn => btn.classList.remove('active'));
-      
+
       if (seasonName === 'Summer') buttons[0].classList.add('active');
       if (seasonName === 'Rainy')  buttons[1].classList.add('active');
       if (seasonName === 'Winter') buttons[2].classList.add('active');
@@ -311,18 +312,20 @@
 
       // หากมีรูปภาพถ่ายถูกส่งมา
       if (data.image && data.image.length > 50) {
-        document.getElementById('snapshotImg').src = data.image;
-        document.getElementById('imgTime').innerText = timeInfo.full;
-        
-        const imgBadge = document.getElementById('imgStatus');
-        imgBadge.className = data.status === 'Critical' ? 'badge bg-danger' : 'badge bg-warning text-dark';
-        imgBadge.innerText = data.status;
-
-        // 🤖 สั่งให้ AI ประมวลผลภาพถ่ายใหม่เมื่อมีรูปภาพอัปเดต
+        // อัปเดตรูปเฉพาะเมื่อเปลี่ยน เพื่อไม่ให้รูปกะพริบทุก 2.5 วินาที
         if (data.image !== lastAnalyzedImage) {
+          const imgEl = document.getElementById('snapshotImg');
+          imgEl.onerror = () => console.error('Image data is corrupt, length =', data.image.length);
+          imgEl.src = data.image;
+          document.getElementById('imgTime').innerText = timeInfo.full;
+
           lastAnalyzedImage = data.image;
           runAIImageAnalysis(data.image, data.status);
         }
+
+        const imgBadge = document.getElementById('imgStatus');
+        imgBadge.className = data.status === 'Critical' ? 'badge bg-danger' : 'badge bg-warning text-dark';
+        imgBadge.innerText = data.status;
       }
 
       logsHistory.unshift({
@@ -343,7 +346,7 @@
     function runAIImageAnalysis(base64Img, currentStatus) {
       const img = new Image();
       img.src = base64Img;
-      
+
       img.onload = function() {
         const canvas = document.getElementById('analysisCanvas');
         const ctx = canvas.getContext('2d');
@@ -353,7 +356,7 @@
 
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const pixels = imageData.data;
-        
+
         let smokePixels = 0;
         let flamePixels = 0;
         let totalPixels = pixels.length / 4;
