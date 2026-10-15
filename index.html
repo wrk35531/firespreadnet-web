@@ -256,7 +256,7 @@
 
         if (!data) return;
 
-        // เช็กสถานะ Offline
+        // เช็กสถานะ Offline (2.5s x 2 รอบ = 5 วินาที)
         if (data.time === lastBoardMillis) {
           unchangedCount++;
         } else {
@@ -264,7 +264,7 @@
           unchangedCount = 0;
         }
 
-        if (unchangedCount >= 4) {
+        if (unchangedCount >= 2) {
           setSystemOffline();
           return;
         }
@@ -460,7 +460,8 @@
       });
     }
 
-    setInterval(checkFirebaseData, 3000);
+    // 💡 ตั้งเวลาดึงข้อมูลทุกๆ 2.5 วินาที
+    setInterval(checkFirebaseData, 2500);
     checkFirebaseData();
   </script>
 </body>
