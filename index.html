@@ -256,7 +256,7 @@
 
         if (!data) return;
 
-        // เช็กสถานะ Offline (2.5s x 2 รอบ = 5 วินาที)
+        // เช็กสถานะ Offline (2.5s x 4 รอบ = 10 วินาที)
         if (data.time === lastBoardMillis) {
           unchangedCount++;
         } else {
@@ -264,7 +264,7 @@
           unchangedCount = 0;
         }
 
-        if (unchangedCount >= 2) {
+        if (unchangedCount >= 4) {
           setSystemOffline();
           return;
         }
@@ -358,17 +358,15 @@
         let flamePixels = 0;
         let totalPixels = pixels.length / 4;
 
-        // วนลูปสแกนค่าพิกเซลสีควันและไฟ (Smoke & Flame Pixel Matrix Analysis)
+        // วนลูปสแกนค่าพิกเซลสีควันและไฟ
         for (let i = 0; i < pixels.length; i += 4) {
           let r = pixels[i];
           let g = pixels[i + 1];
           let b = pixels[i + 2];
 
-          // เกณฑ์ตรวจจับสีไฟ (Orange/Red high brightness)
           if (r > 180 && g > 80 && b < 100 && (r - g) > 40) {
             flamePixels++;
           }
-          // เกณฑ์ตรวจจับสีกลุ่มควัน (White/Gray haze over green foliage)
           else if (r > 150 && g > 150 && b > 150 && Math.abs(r - g) < 20 && Math.abs(g - b) < 20) {
             smokePixels++;
           }
@@ -460,8 +458,7 @@
       });
     }
 
-    // 💡 ตั้งเวลาดึงข้อมูลทุกๆ 2.5 วินาที
-    setInterval(checkFirebaseData, 3000);
+    setInterval(checkFirebaseData, 2500);
     checkFirebaseData();
   </script>
 </body>
